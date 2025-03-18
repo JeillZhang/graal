@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,24 +22,11 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.identityhashcode;
 
-import com.oracle.svm.core.config.ConfigurationValues;
-import com.oracle.svm.core.config.ObjectLayout;
-import com.oracle.svm.core.feature.AutomaticallyRegisteredFeature;
-import com.oracle.svm.core.feature.InternalFeature;
-import com.oracle.svm.core.graal.meta.SubstrateForeignCallsProvider;
-
-@AutomaticallyRegisteredFeature
-final class SubstrateIdentityHashCodeFeature implements InternalFeature {
-
-    @Override
-    public void registerForeignCalls(SubstrateForeignCallsProvider foreignCalls) {
-        ObjectLayout ol = ConfigurationValues.getObjectLayout();
-        if (ol.isIdentityHashFieldOptional()) {
-            foreignCalls.register(SubstrateIdentityHashCodeSnippets.COMPUTE_ABSENT_IDENTITY_HASH_CODE);
-        } else {
-            foreignCalls.register(SubstrateIdentityHashCodeSnippets.GENERATE_IDENTITY_HASH_CODE);
-        }
-    }
-}
+/**
+ * This package is intentionally not marked as {@link org.graalvm.nativeimage.Platform.HOSTED_ONLY}
+ * as it is used in the driver (<code>com.oracle.svm.driver.NativeImage</code>) during the image
+ * build. Otherwise, classes in this package are effectively
+ * {@link org.graalvm.nativeimage.Platform.HOSTED_ONLY}.
+ */
+package com.oracle.svm.hosted.driver;
