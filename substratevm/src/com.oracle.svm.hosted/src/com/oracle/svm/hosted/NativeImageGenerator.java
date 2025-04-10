@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
@@ -153,9 +154,6 @@ import com.oracle.svm.core.graal.phases.RemoveUnwindPhase;
 import com.oracle.svm.core.graal.phases.SubstrateSafepointInsertionPhase;
 import com.oracle.svm.core.graal.snippets.DeoptTester;
 import com.oracle.svm.core.graal.snippets.NodeLoweringProvider;
-import com.oracle.svm.core.graal.snippets.OpenTypeWorldDispatchTableSnippets;
-import com.oracle.svm.core.graal.snippets.OpenTypeWorldSnippets;
-import com.oracle.svm.core.graal.snippets.TypeSnippets;
 import com.oracle.svm.core.graal.word.SubstrateWordOperationPlugins;
 import com.oracle.svm.core.graal.word.SubstrateWordTypes;
 import com.oracle.svm.core.heap.BarrierSetProvider;
@@ -1107,10 +1105,10 @@ public class NativeImageGenerator {
 
                 var runtimeReflection = ImageSingletons.lookup(RuntimeReflectionSupport.class);
 
-                var classesToIgnore = OptionClassFilterBuilder.createFilter(loader, SubstrateOptions.IgnorePreserveForClasses, SubstrateOptions.IgnorePreserveForClassesPaths);
+                Set<String> classesOrPackagesToIgnore = ignoredClassesOrPackagesForPreserve();
                 loader.classLoaderSupport.getClassesToPreserve().parallel()
                                 .filter(ClassInclusionPolicy::isClassIncludedBase)
-                                .filter(c -> classesToIgnore.isIncluded(c) == null)
+                                .filter(c -> !(classesOrPackagesToIgnore.contains(c.getPackageName()) || classesOrPackagesToIgnore.contains(c.getName())))
                                 .forEach(c -> runtimeReflection.registerClassFully(ConfigurationCondition.alwaysTrue(), c));
                 for (String className : loader.classLoaderSupport.getClassNamesToPreserve()) {
                     RuntimeReflection.registerClassLookup(className);
@@ -1121,6 +1119,13 @@ public class NativeImageGenerator {
 
             ProgressReporter.singleton().printInitializeEnd(featureHandler.getUserSpecificFeatures(), loader);
         }
+    }
+
+    private static Set<String> ignoredClassesOrPackagesForPreserve() {
+        Set<String> ignoredClassesOrPackages = new HashSet<>(SubstrateOptions.IgnorePreserveForClasses.getValue().valuesAsSet());
+        // GR-63360: Parsing of constant_ lambda forms fails
+        ignoredClassesOrPackages.add("java.lang.invoke.LambdaForm$Holder");
+        return Collections.unmodifiableSet(ignoredClassesOrPackages);
     }
 
     protected void registerEntryPointStubs(Map<Method, CEntryPointData> entryPoints) {
@@ -1502,12 +1507,6 @@ public class NativeImageGenerator {
             Map<Class<? extends Node>, NodeLoweringProvider<?>> lowerings = lowerer.getLowerings();
 
             lowerer.setConfiguration(runtimeConfig, options, providers);
-            if (SubstrateOptions.useClosedTypeWorldHubLayout()) {
-                TypeSnippets.registerLowerings(options, providers, lowerings);
-            } else {
-                OpenTypeWorldSnippets.registerLowerings(options, providers, lowerings);
-                OpenTypeWorldDispatchTableSnippets.registerLowerings(options, providers, lowerings);
-            }
 
             featureHandler.forEachGraalFeature(feature -> feature.registerLowerings(runtimeConfig, options, providers, lowerings, hosted));
         } catch (Throwable e) {
