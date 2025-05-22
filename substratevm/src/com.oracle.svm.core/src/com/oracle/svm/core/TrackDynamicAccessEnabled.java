@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2020, 2020, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2020, 2020, Alibaba Group Holding Limited. All rights reserved.
+ * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +22,26 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.reflect.serialize;
+package com.oracle.svm.core;
 
-import com.oracle.svm.core.hub.DynamicHub;
+import org.graalvm.nativeimage.ImageSingletons;
+import org.graalvm.nativeimage.Platform;
+import org.graalvm.nativeimage.Platforms;
 
-public interface SerializationRegistry {
-    boolean isRegisteredForSerialization0(DynamicHub dynamicHub);
+import java.util.function.BooleanSupplier;
 
-    Object getSerializationConstructorAccessor0(Class<?> declaringClass, Class<?> targetConstructorClass);
+public class TrackDynamicAccessEnabled implements BooleanSupplier {
+
+    @Override
+    public boolean getAsBoolean() {
+        return isTrackDynamicAccessEnabled();
+    }
+
+    public static boolean isTrackDynamicAccessEnabled() {
+        return ImageSingletons.contains(TrackDynamicAccessEnabledSingleton.class);
+    }
+
+    @Platforms(Platform.HOSTED_ONLY.class)
+    public interface TrackDynamicAccessEnabledSingleton {
+    }
 }
