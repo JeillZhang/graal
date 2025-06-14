@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,3 +22,28 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package jdk.graal.compiler.replacements.test;
+
+import org.junit.Test;
+
+import jdk.graal.compiler.jtt.JTTTest;
+
+public class MathCbrtTest extends JTTTest {
+
+    public double cbrt(double d) {
+        return Math.cbrt(d);
+    }
+
+    @Test
+    public void testCbrt() {
+        for (double d = -3.0d; d <= 3.0D; d += 0.01D) {
+            test("cbrt", d);
+        }
+
+        double[] inputs = {Math.PI / 2, Math.PI, -1.0D, Double.MAX_VALUE, Double.MIN_VALUE, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY,
+                        Double.longBitsToDouble(0x7fffffffffffffffL), Double.longBitsToDouble(0xffffffffffffffffL)};
+        for (double d : inputs) {
+            test("cbrt", d);
+        }
+    }
+}
