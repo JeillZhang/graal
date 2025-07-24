@@ -1,10 +1,12 @@
 /*
- * Copyright (c) 2021, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -20,18 +22,26 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.truffle.espresso.redefinition;
 
-public class RedefinitionNotSupportedException extends Exception {
-
-    private static final long serialVersionUID = -5767957395371919542L;
-    private final int errorCode;
-
-    public RedefinitionNotSupportedException(int errorCode) {
-        this.errorCode = errorCode;
+function add(a, b, test) {
+    if (test) {
+        a += b;
     }
-
-    public int getErrorCode() {
-        return errorCode;
-    }
+    return a + b;
 }
+
+// trigger compilation add for ints and test = true
+for (let i = 0; i < 1000 * 1000; i++) {
+    add(i, i, true);
+}
+
+// deoptimize with failed assumption in compiled method
+// then trigger compilation again
+console.log("deopt1")
+for (let i = 0; i < 1000 * 1000; i++) {
+    add(i, i, false);
+}
+
+// deoptimize with different parameter types
+console.log("deopt2");
+add({f1: "test1", f2: 2}, {x: "x", y: {test: 42}}, false);
