@@ -22,35 +22,21 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.common.option;
+package com.oracle.svm.interpreter.metadata;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import jdk.graal.compiler.core.common.util.CompilationAlarm;
-import jdk.graal.compiler.hotspot.CompilerConfigurationFactory;
-import jdk.graal.compiler.options.OptionKey;
+import java.io.Serial;
 
 /**
- * Native image uses its own mechanisms to handle certain options, resulting in some Graal options
- * being completely unused in native image. Being unused results in the options being silently
- * ignored if set by the user. All such options should be listed here so that the native image
- * options processing can reject them as unsupported.
+ * Thrown when CP resolution is not supported for a specific entry in a constant pool, this is
+ * usually for constant pools derived, at build time, from JVMCI data structures.
  */
-public final class IntentionallyUnsupportedOptions {
+public final class UnsupportedResolutionException extends UnsupportedOperationException {
 
-    private static final Set<OptionKey<?>> unsupportedOptions = new HashSet<>();
+    @Serial private static final long serialVersionUID = 999753019083783068L;
 
-    static {
-        unsupportedOptions.add(CompilerConfigurationFactory.Options.CompilerConfiguration);
-        unsupportedOptions.add(CompilationAlarm.Options.CompilationNoProgressPeriod);
-    }
-
-    private IntentionallyUnsupportedOptions() {
-        throw new IllegalStateException("Should not be initialized");
-    }
-
-    public static boolean contains(OptionKey<?> optionKey) {
-        return unsupportedOptions.contains(optionKey);
+    @Override
+    @SuppressWarnings("sync-override")
+    public Throwable fillInStackTrace() {
+        return this;
     }
 }
