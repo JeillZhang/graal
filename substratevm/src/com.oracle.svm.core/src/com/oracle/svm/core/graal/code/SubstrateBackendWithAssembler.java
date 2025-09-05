@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,33 +22,24 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jdk.graal.compiler.hotspot;
+package com.oracle.svm.core.graal.code;
 
-import jdk.graal.compiler.core.common.CompilerProfiler;
-import jdk.graal.compiler.serviceprovider.ServiceProvider;
-import jdk.vm.ci.hotspot.JFR;
-import jdk.vm.ci.meta.ResolvedJavaMethod;
+import org.graalvm.collections.EconomicMap;
 
-/**
- * A HotSpot JFR implementation of {@link CompilerProfiler}.
- */
-@ServiceProvider(CompilerProfiler.class)
-public final class JFRCompilerProfiler implements CompilerProfiler {
+import jdk.graal.compiler.asm.Assembler;
+import jdk.graal.compiler.options.OptionValues;
+import jdk.graal.compiler.phases.util.Providers;
 
-    @Override
-    public long getTicks() {
-        return JFR.Ticks.now();
+public abstract class SubstrateBackendWithAssembler<A extends Assembler<?>> extends SubstrateBackend {
+
+    protected SubstrateBackendWithAssembler(Providers providers) {
+        super(providers);
     }
 
-    @Override
-    public void notifyCompilerPhaseEvent(int compileId, long startTime, String name, int nestingLevel) {
-        JFR.CompilerPhaseEvent.write(startTime, name, compileId, nestingLevel);
-    }
+    protected abstract A createAssembler(OptionValues options);
 
-    @Override
-    public void notifyCompilerInliningEvent(int compileId, ResolvedJavaMethod caller, ResolvedJavaMethod callee,
-                    boolean succeeded, String message, int bci) {
-        JFR.CompilerInliningEvent.write(compileId, caller, callee, succeeded, message, bci);
+    public final A createAssemblerNoOptions() {
+        OptionValues o = new OptionValues(EconomicMap.create());
+        return createAssembler(o);
     }
-
 }
