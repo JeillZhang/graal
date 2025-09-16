@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * The Universal Permissive License (UPL), Version 1.0
@@ -38,41 +38,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package <package>;
+package com.oracle.truffle.api.bytecode.test;
 
-import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.InternalResource;
-import com.oracle.truffle.api.InternalResource.CPUArchitecture;
-import com.oracle.truffle.api.InternalResource.OS;
+import com.oracle.truffle.api.bytecode.OperationProxy;
+import com.oracle.truffle.api.dsl.Bind;
+import com.oracle.truffle.api.dsl.GenerateInline;
+import com.oracle.truffle.api.dsl.GenerateUncached;
+import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.Node;
 
-import com.oracle.truffle.polyglot.enterprise.isolate.PolyglotIsolateLanguages;
+@GenerateUncached
+@GenerateInline(false)
+@OperationProxy.Proxyable(allowUncached = true)
+public abstract class ExternalProxyNode extends Node {
+    public abstract boolean execute(VirtualFrame frame, Object object);
 
-import java.io.IOException;
-import java.nio.file.Path;
-
-@InternalResource.Id(value = PolyglotIsolateResource.ID, componentId = "engine", optional = true)
-@PolyglotIsolateLanguages(value={<languageIds>}, os=OS.<OS>, cpuArchitecture=CPUArchitecture.<CPUArchitecture>)
-public final class PolyglotIsolateResource implements InternalResource {
-
-    static final String ID = "<resourceId>";
-
-    @Override
-    public void unpackFiles(Env env, Path targetDirectory) throws IOException {
-        Path base = basePath(env);
-        env.unpackResourceFiles(base.resolve("files"), targetDirectory, base);
+    @SuppressWarnings("unused")
+    @Specialization
+    public static boolean doBoolean(boolean object, @Bind Node node) {
+        return object;
     }
 
-    @Override
-    public String versionHash(Env env) {
-        try {
-            Path base = basePath(env);
-            return env.readResourceLines(base.resolve("sha256")).get(0);
-        } catch (IOException ioe) {
-            throw CompilerDirectives.shouldNotReachHere(ioe);
-        }
-    }
-
-    private static Path basePath(Env env) {
-        return Path.of("META-INF", "resources", "engine", ID, "libvm");
-    }
 }
