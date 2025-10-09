@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,10 +22,23 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.reflect.target;
+package jdk.graal.compiler.hotspot.replaycomp;
 
-import com.oracle.svm.core.annotate.TargetClass;
-
-@TargetClass(className = "jdk.internal.reflect.ConstructorAccessor")
-public final class Target_jdk_internal_reflect_ConstructorAccessor {
+/**
+ * A surrogate for a deserialized {@link Class} object, which is needed on libgraal since libgraal
+ * may not be able to find a {@link Class} using {@link Class#forName(String)}. The surrogate may be
+ * used in place of an argument value of a recorded operation (e.g.,
+ * {@link jdk.vm.ci.meta.MetaAccessProvider#lookupJavaType(Class)}), in which case the replay code
+ * calls {@link ClassSurrogate#equals(Object)} to check the equivalence of arguments.
+ *
+ * @param name the name of the class as returned by {@link Class#getName()}
+ */
+record ClassSurrogate(String name) {
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Class<?> clazz) {
+            return name.equals(clazz.getName());
+        }
+        return false;
+    }
 }

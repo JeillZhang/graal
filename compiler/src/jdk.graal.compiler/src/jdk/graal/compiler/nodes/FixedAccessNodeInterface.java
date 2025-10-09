@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,10 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.reflect.target;
+package jdk.graal.compiler.nodes;
 
-import com.oracle.svm.core.annotate.TargetClass;
+import jdk.graal.compiler.nodes.memory.FixedAccessNode;
 
-@TargetClass(className = "jdk.internal.reflect.ConstructorAccessor")
-public final class Target_jdk_internal_reflect_ConstructorAccessor {
+/**
+ * See {@link ValueNodeInterface} for details about these node interfaces.
+ */
+public interface FixedAccessNodeInterface extends FixedWithNextNodeInterface {
+    FixedAccessNode asFixedAccessNode();
 }
