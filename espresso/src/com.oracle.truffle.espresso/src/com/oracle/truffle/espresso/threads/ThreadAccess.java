@@ -449,18 +449,20 @@ public final class ThreadAccess extends ContextAccessImpl implements GuestInterr
      */
     public Thread createJavaThread(StaticObject guest, DirectCallNode exit, DirectCallNode dispatch) {
         Thread host = getContext().getEnv().newTruffleThreadBuilder(new GuestRunnable(getContext(), guest, exit, dispatch)).build();
-        initializeHiddenFields(guest, host, true);
         // Prepare host thread
         host.setDaemon(isDaemon(guest));
         host.setPriority(getPriority(guest));
+        String guestName = getContext().getThreadAccess().getThreadName(guest);
+        host.setName(guestName);
         if (isInterrupted(guest, false)) {
             host.interrupt();
         }
-        String guestName = getContext().getThreadAccess().getThreadName(guest);
-        host.setName(guestName);
+        // Prepare guest thread
+        initializeHiddenFields(guest, host, true);
         getThreadAccess().setEETopAlive(guest);
-        // Make the thread known to the context
-        getContext().registerThread(host, guest);
+        // Associate host and guest
+        getContext().registerJavaThread(host, guest);
+
         // Thread must be runnable on returning from 'start', so we set it preemptively
         // here.
         getThreadAccess().initializeState(guest, ThreadState.DefaultStates.DEFAULT_RUNNABLE_STATE);
@@ -559,8 +561,8 @@ public final class ThreadAccess extends ContextAccessImpl implements GuestInterr
                 } finally {
                     transition.restore(this);
                 }
+                setTerminateStatusAndNotify(thread);
             }
-            setTerminateStatusAndNotify(thread);
         } else {
             assert ThreadState.isTerminated(getState(thread));
         }
@@ -573,6 +575,11 @@ public final class ThreadAccess extends ContextAccessImpl implements GuestInterr
      * If this method returns true, the thread will have been terminated.
      */
     public boolean terminateIfStillborn(StaticObject guest) {
+        if (getContext().isClosing() || getContext().isTruffleClosed()) {
+            setState(guest, ThreadState.DefaultStates.DEFAULT_RUNNABLE_STATE);
+            // Present the thread as started, but it will never be run.
+            return true;
+        }
         if (isStillborn(guest)) {
             setTerminateStatusAndNotify(guest);
             return true;
@@ -593,9 +600,6 @@ public final class ThreadAccess extends ContextAccessImpl implements GuestInterr
     }
 
     private boolean isStillborn(StaticObject guest) {
-        if (getContext().isClosing() || getContext().isTruffleClosed()) {
-            return true;
-        }
         /*
          * A bit of a special case. We want to make sure we observe the stillborn status
          * synchronously.
