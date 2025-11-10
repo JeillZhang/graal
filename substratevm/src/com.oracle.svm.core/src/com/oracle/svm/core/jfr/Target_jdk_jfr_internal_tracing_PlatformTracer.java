@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2016, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2025, IBM Inc. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +23,19 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core;
 
-import org.graalvm.word.UnsignedWord;
+package com.oracle.svm.core.jfr;
 
-import com.oracle.svm.core.heap.ObjectVisitor;
-import com.oracle.svm.core.heap.RestrictHeapAccess;
+import com.oracle.svm.core.annotate.Substitute;
+import com.oracle.svm.core.annotate.TargetClass;
 
-/** A walker over different kinds of allocated memory. */
-public final class MemoryWalker {
-    public interface ImageHeapRegionVisitor {
-        /** Visit a region from the native image heap. */
-        @RestrictHeapAccess(access = RestrictHeapAccess.Access.NO_ALLOCATION, reason = "Must not allocate while visiting memory.")
-        <T> void visitNativeImageHeapRegion(T region, MemoryWalker.NativeImageHeapRegionAccess<T> access);
-    }
+import jdk.jfr.internal.tracing.PlatformTracer;
 
-    /** A set of access methods for visiting regions of the native image heap. */
-    public interface NativeImageHeapRegionAccess<T> {
-
-        Object getFirstObject(T region);
-
-        Object getLastObject(T region);
-
-        UnsignedWord getSize(T region);
-
-        boolean isWritable(T region);
-
-        boolean usesUnalignedChunks(T region);
-
-        void visitObjects(T region, ObjectVisitor visitor);
-    }
-
+/**
+ * This class is not supported at the moment. So, we completely replace it with an empty
+ * implementation to reduce the image size.
+ */
+@Substitute
+@TargetClass(value = PlatformTracer.class)
+public final class Target_jdk_jfr_internal_tracing_PlatformTracer {
 }

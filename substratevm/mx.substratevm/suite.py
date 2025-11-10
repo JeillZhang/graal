@@ -1,6 +1,6 @@
 # pylint: disable=line-too-long
 suite = {
-    "mxversion": "7.58.6",
+    "mxversion": "7.67.0",
     "name": "substratevm",
     "version" : "25.1.0",
     "release" : False,
@@ -383,6 +383,8 @@ suite = {
                     "jdk.jfr.internal",
                     "jdk.jfr.internal.event",
                     "jdk.jfr.internal.jfc",
+                    "jdk.jfr.internal.settings",
+                    "jdk.jfr.internal.tracing",
                 ],
                 "jdk.internal.vm.ci": [
                     "jdk.vm.ci.meta",
