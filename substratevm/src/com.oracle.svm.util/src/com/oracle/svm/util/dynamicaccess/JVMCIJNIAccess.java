@@ -22,20 +22,30 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.svm.util.dynamicaccess;
 
-package com.oracle.svm.hosted.webimage.wasmgc.phases;
+import org.graalvm.nativeimage.dynamicaccess.AccessCondition;
 
-import com.oracle.svm.core.graal.code.SubstrateSuitesCreatorProvider;
-import com.oracle.svm.core.traits.BuiltinTraits.BuildtimeAccessOnly;
-import com.oracle.svm.core.traits.BuiltinTraits.NoLayeredCallbacks;
-import com.oracle.svm.core.traits.SingletonLayeredInstallationKind.Disallowed;
-import com.oracle.svm.core.traits.SingletonTraits;
+import jdk.vm.ci.meta.ResolvedJavaField;
+import jdk.vm.ci.meta.ResolvedJavaMethod;
+import jdk.vm.ci.meta.ResolvedJavaType;
 
-@SingletonTraits(access = BuildtimeAccessOnly.class, layeredCallbacks = NoLayeredCallbacks.class, layeredInstallationKind = Disallowed.class)
-public class WebImageWasmGCSuitesCreatorProvider extends SubstrateSuitesCreatorProvider {
+/**
+ * Mirror of org.graalvm.nativeimage.dynamicaccess.JNIAccess using JVMCI types.
+ */
+public interface JVMCIJNIAccess {
+    /**
+     * See org.graalvm.nativeimage.dynamicaccess.JNIAccess#register(AccessCondition, Class...).
+     */
+    void register(AccessCondition condition, ResolvedJavaType... types);
 
-    public WebImageWasmGCSuitesCreatorProvider() {
-        super(new WebImageWasmGCSuitesCreator(), new WebImageWasmGCSuitesCreator());
-    }
+    /**
+     * See org.graalvm.nativeimage.dynamicaccess.JNIAccess#register(AccessCondition, Executable...).
+     */
+    void register(AccessCondition condition, ResolvedJavaMethod... methods);
 
+    /**
+     * See org.graalvm.nativeimage.dynamicaccess.JNIAccess#register(AccessCondition, Field...).
+     */
+    void register(AccessCondition condition, ResolvedJavaField... fields);
 }
