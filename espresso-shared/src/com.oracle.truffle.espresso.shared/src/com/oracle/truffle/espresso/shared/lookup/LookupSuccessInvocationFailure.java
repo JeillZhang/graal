@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,29 +22,41 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.truffle.api;
+package com.oracle.truffle.espresso.shared.lookup;
 
-import org.graalvm.nativeimage.Platform;
-import org.graalvm.nativeimage.Platforms;
+import java.io.Serial;
 
-import com.oracle.graal.pointsto.meta.AnalysisField;
-import com.oracle.svm.core.util.HostedStringDeduplication;
-import com.oracle.svm.graal.meta.SubstrateField;
+import com.oracle.truffle.espresso.shared.meta.MethodAccess;
 
-import jdk.graal.compiler.truffle.ConstantFieldInfo;
+/**
+ * Checked exception thrown by the {@link MethodLookup} helper class when method lookup succeeds,
+ * but direct invocation of the resulting method should trigger
+ * {@link IncompatibleClassChangeError}.
+ * <p>
+ * Use of a checked exceptions should ensure that the result is not accidentally passed along or
+ * invoked without consideration.
+ */
+public final class LookupSuccessInvocationFailure extends Exception {
+    @Serial private static final long serialVersionUID = 1794882806666028197L;
 
-public class SubstrateTruffleField extends SubstrateField implements TruffleField {
-
-    private final ConstantFieldInfo constantFieldInfo;
-
-    @Platforms(Platform.HOSTED_ONLY.class)
-    public SubstrateTruffleField(AnalysisField aField, HostedStringDeduplication stringTable, ConstantFieldInfo constantFieldInfo) {
-        super(aField, stringTable);
-        this.constantFieldInfo = constantFieldInfo;
+    LookupSuccessInvocationFailure(MethodAccess<?, ?, ?> m) {
+        super(null, null);
+        this.m = m;
     }
 
+    private final transient MethodAccess<?, ?, ?> m;
+
+    /**
+     * Obtain the result of method lookup.
+     */
+    @SuppressWarnings("unchecked")
+    public <M extends MethodAccess<?, ?, ?>> M getResult() {
+        return (M) m;
+    }
+
+    @SuppressWarnings("sync-override")
     @Override
-    public ConstantFieldInfo getConstantFieldInfo() {
-        return constantFieldInfo;
+    public Throwable fillInStackTrace() {
+        return this;
     }
 }
