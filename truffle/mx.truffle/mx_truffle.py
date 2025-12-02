@@ -100,10 +100,11 @@ class JMHDistTruffleBenchmarkSuite(mx_benchmark.JMHDistBenchmarkSuite, JMHNative
     def successPatterns(self):
         return super().successPatterns() + JMHNativeImageBenchmarkMixin.native_image_success_patterns()
 
+    def failurePatterns(self):
+        return super().failurePatterns() + [re.compile(r"CompilationTimingsProfiler error:")]
+
     def extraVmArgs(self):
         extraVmArgs = super(JMHDistTruffleBenchmarkSuite, self).extraVmArgs()
-        # org.graalvm.truffle.benchmark.InterpreterCallBenchmark$BenchmarkState needs DefaultTruffleRuntime
-        extraVmArgs.append('--add-exports=org.graalvm.truffle/com.oracle.truffle.api.impl=ALL-UNNAMED')
         # org.graalvm.truffle.compiler.benchmark.* needs OptimizedTruffleRuntime
         extraVmArgs.append('--add-exports=org.graalvm.truffle.runtime/com.oracle.truffle.runtime=ALL-UNNAMED')
         return extraVmArgs
