@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,30 +22,20 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.foreign;
+package com.oracle.svm.util;
 
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemorySegment;
+import org.graalvm.nativeimage.ImageSingletons;
+import org.graalvm.nativeimage.impl.RuntimeClassInitializationSupport;
 
-import com.oracle.svm.core.annotate.Substitute;
-import com.oracle.svm.core.annotate.TargetClass;
+import jdk.vm.ci.meta.ResolvedJavaType;
 
-import jdk.internal.foreign.MemorySessionImpl;
+public interface JVMCIRuntimeClassInitializationSupport extends RuntimeClassInitializationSupport {
 
-@TargetClass(className = "jdk.internal.foreign.abi.UpcallStubs", onlyWith = ForeignAPIPredicates.Enabled.class)
-final class Target_jdk_internal_foreign_abi_UpcallStubs {
-    @Substitute
-    @SuppressWarnings("restricted")
-    static MemorySegment makeUpcall(long entry, Arena arena) {
-        if (!ForeignFunctionsRuntime.areFunctionCallsSupported()) {
-            throw ForeignFunctionsRuntime.functionCallsUnsupported();
-        }
-        MemorySessionImpl.toMemorySession(arena).addOrCleanupIfFail(new MemorySessionImpl.ResourceList.ResourceCleanup() {
-            @Override
-            public void cleanup() {
-                ForeignFunctionsRuntime.singleton().freeTrampoline(entry);
-            }
-        });
-        return MemorySegment.ofAddress(entry).reinterpret(arena, null);
+    static JVMCIRuntimeClassInitializationSupport singleton() {
+        return (JVMCIRuntimeClassInitializationSupport) ImageSingletons.lookup(RuntimeClassInitializationSupport.class);
     }
+
+    void initializeAtRunTime(ResolvedJavaType aType, String reason);
+
+    void initializeAtBuildTime(ResolvedJavaType aType, String reason);
 }
