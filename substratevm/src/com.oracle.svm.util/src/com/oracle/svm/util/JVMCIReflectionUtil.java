@@ -33,11 +33,10 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.oracle.graal.vmaccess.ResolvedJavaModule;
-import com.oracle.graal.vmaccess.ResolvedJavaModuleLayer;
-import com.oracle.graal.vmaccess.ResolvedJavaPackage;
-
 import jdk.graal.compiler.debug.GraalError;
+import jdk.graal.compiler.vmaccess.ResolvedJavaModule;
+import jdk.graal.compiler.vmaccess.ResolvedJavaModuleLayer;
+import jdk.graal.compiler.vmaccess.ResolvedJavaPackage;
 import jdk.vm.ci.meta.JavaConstant;
 import jdk.vm.ci.meta.JavaType;
 import jdk.vm.ci.meta.MetaAccessProvider;
@@ -421,5 +420,21 @@ public final class JVMCIReflectionUtil {
             throw new IllegalArgumentException(fieldName + " is not static");
         }
         return GraalAccess.getOriginalProviders().getConstantReflection().readFieldValue(field, null);
+    }
+
+    /**
+     * @see ReflectionUtil#newInstance
+     */
+    public static JavaConstant newInstance(ResolvedJavaType type) {
+        return JVMCIReflectionUtilFallback.newInstance(type);
+    }
+
+    /**
+     * Creates a new array with the specified component type and length.
+     *
+     * @see java.lang.reflect.Array#newInstance(Class, int)
+     */
+    public static JavaConstant newArrayInstance(ResolvedJavaType componentType, int length) {
+        return JVMCIReflectionUtilFallback.newArrayInstance(componentType, length);
     }
 }
