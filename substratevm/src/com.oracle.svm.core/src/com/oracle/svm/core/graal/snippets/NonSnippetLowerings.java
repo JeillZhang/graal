@@ -34,6 +34,7 @@ import java.util.function.Predicate;
 
 import org.graalvm.nativeimage.c.function.CFunctionPointer;
 import org.graalvm.word.LocationIdentity;
+import org.graalvm.word.impl.Word;
 
 import com.oracle.svm.core.FrameAccess;
 import com.oracle.svm.core.ReservedRegisters;
@@ -115,7 +116,6 @@ import jdk.graal.compiler.nodes.spi.StampProvider;
 import jdk.graal.compiler.nodes.type.StampTool;
 import jdk.graal.compiler.options.OptionValues;
 import jdk.graal.compiler.phases.util.Providers;
-import jdk.graal.compiler.word.Word;
 import jdk.vm.ci.code.CallingConvention;
 import jdk.vm.ci.meta.DeoptimizationAction;
 import jdk.vm.ci.meta.DeoptimizationReason;
@@ -430,8 +430,6 @@ public abstract class NonSnippetLowerings {
                          */
                         loweredCallTarget = createUnreachableCallTarget(tool, node, parameters, callTarget.returnStamp(), signature, method, callType, invokeKind);
                     } else {
-                        // This needs to have a static type of CFunctionPointer to workaround
-                        // GR-72464
                         CFunctionPointer rawAdrConstant = targetMethod.getAOTEntrypoint();
                         assert !SubstrateUtil.HOSTED;
                         if (rawAdrConstant == Word.nullPointer()) {

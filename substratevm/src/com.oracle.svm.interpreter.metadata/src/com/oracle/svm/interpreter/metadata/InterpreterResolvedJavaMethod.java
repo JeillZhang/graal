@@ -47,6 +47,7 @@ import java.util.function.Function;
 
 import org.graalvm.nativeimage.Platform;
 import org.graalvm.nativeimage.Platforms;
+import org.graalvm.nativeimage.c.function.CFunctionPointer;
 
 import com.oracle.svm.core.BuildPhaseProvider;
 import com.oracle.svm.core.FunctionPointerHolder;
@@ -76,7 +77,6 @@ import com.oracle.svm.interpreter.metadata.serialization.VisibleForSerialization
 import com.oracle.svm.util.AnnotationUtil;
 import com.oracle.svm.util.ReflectionUtil;
 
-import jdk.graal.compiler.word.Word;
 import jdk.vm.ci.meta.Constant;
 import jdk.vm.ci.meta.ExceptionHandler;
 import jdk.vm.ci.meta.LineNumberTable;
@@ -87,6 +87,7 @@ import jdk.vm.ci.meta.ResolvedJavaMethod;
 import jdk.vm.ci.meta.ResolvedJavaType;
 import jdk.vm.ci.meta.SpeculationLog;
 import jdk.vm.ci.meta.annotation.AnnotationsInfo;
+import org.graalvm.word.impl.Word;
 
 /**
  * Encapsulates resolved methods used under close-world assumptions, compiled and interpretable, but
@@ -655,11 +656,11 @@ public class InterpreterResolvedJavaMethod extends InterpreterAnnotated implemen
         return nativeEntryPoint != null;
     }
 
-    public final MethodPointer getNativeEntryPoint() {
+    public final CFunctionPointer getNativeEntryPoint() {
         if (nativeEntryPoint == null) {
             return Word.nullPointer();
         }
-        return (MethodPointer) nativeEntryPoint.getReferent().functionPointer;
+        return nativeEntryPoint.getReferent().functionPointer;
     }
 
     public final ReferenceConstant<FunctionPointerHolder> getNativeEntryPointHolderConstant() {
