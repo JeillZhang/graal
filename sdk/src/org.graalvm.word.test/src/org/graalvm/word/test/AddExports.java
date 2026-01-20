@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * The Universal Permissive License (UPL), Version 1.0
@@ -38,42 +38,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.oracle.truffle.api.bytecode.serialization;
+package org.graalvm.word.test;
 
-import java.io.DataInput;
-import java.nio.ByteBuffer;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Utility class with helpers for serialization code.
- *
- * @since 24.2
+ * Specifies packages concealed in JDK modules used by a test. The mx unit test runner will ensure
+ * the packages are exported to the module containing annotated test class.
  */
-public final class SerializationUtils {
-
-    private SerializationUtils() {
-    }
-
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface AddExports {
     /**
-     * Creates a {@link DataInput} backed by a {@link ByteBuffer}. The result can be used as an
-     * input for {@code deserialize}.
-     *
-     * @see com.oracle.truffle.api.bytecode.GenerateBytecode#enableSerialization
-     * @since 24.2
-     * @deprecated Use {@link #createByteBufferDataInput(ByteBuffer)}
+     * The qualified name of the concealed package in {@code <module>/<package>} format (e.g.,
+     * "jdk.internal.vm.ci/jdk.vm.ci.code").
      */
-    @Deprecated(since = "25.1")
-    public static DataInput createDataInput(ByteBuffer buffer) {
-        return new ByteBufferDataInput(buffer);
-    }
-
-    /**
-     * Creates a {@link ByteBufferDataInput}. The result can be used as an input for
-     * {@code deserialize}.
-     *
-     * @see com.oracle.truffle.api.bytecode.GenerateBytecode#enableSerialization
-     * @since 25.1
-     */
-    public static ByteBufferDataInput createByteBufferDataInput(ByteBuffer buffer) {
-        return new ByteBufferDataInput(buffer);
-    }
+    String[] value() default "";
 }
