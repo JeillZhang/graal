@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * The Universal Permissive License (UPL), Version 1.0
@@ -38,53 +38,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.graalvm.nativebridge;
+package com.oracle.truffle.dsl.processor.bytecode.generator;
 
-import java.util.Objects;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.STATIC;
+import static javax.lang.model.element.Modifier.VOLATILE;
 
-/**
- * Represents an entered native isolate thread.
- *
- * @see NativeIsolate#enter()
- */
-public final class NativeIsolateThread extends AbstractIsolateThread {
+import java.util.List;
+import java.util.Set;
 
-    private final NativeIsolate isolate;
-    final long isolateThread;
+import javax.lang.model.element.ElementKind;
 
-    NativeIsolateThread(Thread thread, NativeIsolate isolate, boolean nativeThread, long isolateThreadId) {
-        super(thread, nativeThread);
-        this.isolate = Objects.requireNonNull(isolate, "Isolate must be non-null");
-        this.isolateThread = isolateThreadId;
-    }
+import com.oracle.truffle.dsl.processor.java.model.CodeVariableElement;
 
-    @Override
-    public NativeIsolate getIsolate() {
-        return isolate;
-    }
+final class OldBytecodesBoxElement extends AbstractElement {
 
-    /**
-     * Returns the isolate thread address.
-     *
-     * @throws IllegalStateException when the {@link NativeIsolateThread} is no more entered.
-     */
-    public long getIsolateThreadId() {
-        assert verifyThread();
-        if (!isActive()) {
-            throw new IllegalStateException("Isolate " + isolate + " is not entered.");
+    OldBytecodesBoxElement(BytecodeRootNodeElement parent) {
+        super(parent, Set.of(PRIVATE, STATIC, FINAL), ElementKind.CLASS, null, "OldBytecodesBox");
+        if (!parent.model.isBytecodeUpdatable()) {
+            throw new AssertionError("OldBytecodesBox should only be used when the bytecode is updatable.");
         }
-        return isolateThread;
-    }
 
-    boolean isNativeThread() {
-        return isForeignThread();
-    }
+        BytecodeRootNodeElement.addJavadoc(this, List.of(
+                        "This class defines a shared mutable reference for all bytecode nodes that share the same bytecode array.",
+                        "Before a node invalidates its bytecode, it publishes the original bytecodes to the shared box so that all sharing nodes can access them."));
 
-    @Override
-    public String toString() {
-        return String.format("%s[isolate thread address=0x%s for isolate %s]",
-                        getClass().getSimpleName(),
-                        Long.toHexString(isolateThread),
-                        isolate);
+        this.add(new CodeVariableElement(Set.of(PRIVATE, VOLATILE), type(byte[].class), "value"));
+
     }
 }
