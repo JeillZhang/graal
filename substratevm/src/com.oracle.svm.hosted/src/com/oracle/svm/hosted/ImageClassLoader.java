@@ -59,6 +59,7 @@ import com.oracle.svm.util.OriginalMethodProvider;
 import com.oracle.svm.util.TypeResult;
 
 import jdk.graal.compiler.annotation.AnnotationValue;
+import jdk.graal.compiler.vmaccess.ResolvedJavaModule;
 import jdk.graal.compiler.vmaccess.ResolvedJavaPackage;
 import jdk.graal.compiler.vmaccess.VMAccess;
 import jdk.vm.ci.meta.ResolvedJavaField;
@@ -107,7 +108,7 @@ public final class ImageClassLoader {
     /**
      * Modules containing all {@code svm.core} and {@code svm.hosted} classes.
      */
-    private Set<Module> builderModules;
+    private Set<ResolvedJavaModule> builderModules;
 
     ImageClassLoader(Platform platform, NativeImageClassLoaderSupport classLoaderSupport, VMAccess vmAccess) {
         this.platform = platform;
@@ -232,7 +233,8 @@ public final class ImageClassLoader {
     }
 
     public boolean isCoreType(Class<?> clazz) {
-        return getBuilderModules().contains(clazz.getModule());
+        GuestAccess guestAccess = GuestAccess.get();
+        return getBuilderModules().contains(guestAccess.getModule(guestAccess.lookupType(clazz)));
     }
 
     /**
@@ -489,13 +491,22 @@ public final class ImageClassLoader {
         return classLoaderSupport.applicationModulePath();
     }
 
-    public <T> List<Class<? extends T>> findSubclasses(Class<T> baseClass, boolean includeHostedOnly) {
-        ResolvedJavaType baseType = GuestAccess.get().lookupType(baseClass);
+    public List<ResolvedJavaType> findSubtypes(Class<?> baseClass, boolean includeHostedOnly) {
+        return findSubtypes(GuestAccess.get().lookupType(baseClass), includeHostedOnly);
+    }
+
+    public List<ResolvedJavaType> findSubtypes(ResolvedJavaType baseType, boolean includeHostedOnly) {
         ArrayList<ResolvedJavaType> subtypes = new ArrayList<>();
         addSubclasses(applicationTypes, baseType, subtypes);
         if (includeHostedOnly) {
             addSubclasses(hostedOnlyTypes, baseType, subtypes);
         }
+
+        return subtypes;
+    }
+
+    public <T> List<Class<? extends T>> findSubclasses(Class<T> baseClass, boolean includeHostedOnly) {
+        List<ResolvedJavaType> subtypes = findSubtypes(baseClass, includeHostedOnly);
         ArrayList<Class<? extends T>> result = new ArrayList<>(subtypes.size());
         for (ResolvedJavaType subtype : subtypes) {
             result.add(OriginalClassProvider.getJavaClass(subtype).asSubclass(baseClass));
@@ -511,12 +522,18 @@ public final class ImageClassLoader {
         }
     }
 
-    public List<Class<?>> findAnnotatedClasses(Class<? extends Annotation> annotationClass, boolean includeHostedOnly) {
+    public List<ResolvedJavaType> findAnnotatedResolvedJavaTypes(Class<? extends Annotation> annotationClass, boolean includeHostedOnly) {
         ArrayList<ResolvedJavaType> types = new ArrayList<>();
         addAnnotatedClasses(applicationTypes, annotationClass, types);
         if (includeHostedOnly) {
             addAnnotatedClasses(hostedOnlyTypes, annotationClass, types);
         }
+
+        return types;
+    }
+
+    public List<Class<?>> findAnnotatedClasses(Class<? extends Annotation> annotationClass, boolean includeHostedOnly) {
+        List<ResolvedJavaType> types = findAnnotatedResolvedJavaTypes(annotationClass, includeHostedOnly);
         ArrayList<Class<?>> result = new ArrayList<>(types.size());
         for (ResolvedJavaType type : types) {
             result.add(OriginalClassProvider.getJavaClass(type));
@@ -618,7 +635,7 @@ public final class ImageClassLoader {
         return classLoaderSupport.noEntryForURI(set);
     }
 
-    public Set<Module> getBuilderModules() {
+    public Set<ResolvedJavaModule> getBuilderModules() {
         assert builderModules != null : "Builder modules not yet initialized.";
         return builderModules;
     }
@@ -626,8 +643,9 @@ public final class ImageClassLoader {
     public void initBuilderModules() {
         VMError.guarantee(BuildPhaseProvider.isFeatureRegistrationFinished() && ImageSingletons.contains(VMFeature.class),
                         "Querying builder modules is only possible after feature registration is finished.");
-        Module m0 = ImageSingletons.lookup(VMFeature.class).getClass().getModule();
-        Module m1 = SVMHost.class.getModule();
+        GuestAccess guestAccess = GuestAccess.get();
+        ResolvedJavaModule m0 = guestAccess.getModule(guestAccess.lookupType(ImageSingletons.lookup(VMFeature.class).getClass()));
+        ResolvedJavaModule m1 = guestAccess.getModule(guestAccess.lookupType(SVMHost.class));
         builderModules = m0.equals(m1) ? Set.of(m0) : Set.of(m0, m1);
     }
 
