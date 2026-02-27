@@ -22,19 +22,16 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.common.meta;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package com.oracle.svm.core.jdk.localization.substitutions.modes;
 
-/**
- * Verifies that annotated methods are always folded or intrinsified and that loads of the annotated
- * field are always folded in run time code. This annotation doesn't influence the folding logic
- * itself, it just ensures that the annotated methods fields are not present in the image.
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.FIELD})
-public @interface GuaranteeFolded {
+import java.util.function.BooleanSupplier;
+
+import com.oracle.svm.core.FutureDefaultsOptions;
+
+public class ResourceBundlesAtBuildTime implements BooleanSupplier {
+    @Override
+    public boolean getAsBoolean() {
+        return !FutureDefaultsOptions.resourceBundlesInitializedAtRunTime();
+    }
 }
