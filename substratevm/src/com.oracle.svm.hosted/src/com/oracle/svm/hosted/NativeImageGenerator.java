@@ -265,7 +265,7 @@ import com.oracle.svm.hosted.substitute.SubstitutionInvocationPlugins;
 import com.oracle.svm.hosted.util.CPUTypeAArch64;
 import com.oracle.svm.hosted.util.CPUTypeAMD64;
 import com.oracle.svm.hosted.util.CPUTypeRISCV64;
-import com.oracle.svm.shared.meta.MethodVariant;
+import com.oracle.svm.common.meta.MethodVariant;
 import com.oracle.svm.shared.option.HostedOptionValues;
 import com.oracle.svm.shared.option.OptionClassFilter;
 import com.oracle.svm.shared.option.SubstrateOptionsParser;
@@ -567,14 +567,7 @@ public class NativeImageGenerator {
         try (TemporaryBuildDirectoryProviderImpl tempDirectoryProvider = new TemporaryBuildDirectoryProviderImpl(tempDirectoryOptionValue)) {
             var builderTempDir = tempDirectoryProvider.getTemporaryBuildDirectory();
             HostedImageLayerBuildingSupport imageLayerSupport = HostedImageLayerBuildingSupport.initialize(hostedOptionValues, loader, builderTempDir);
-            /* The callbacks need be installed early, before any singleton is registered. */
-            var registrationCallback = imageLayerSupport.createSingletonRegistrationCallback();
-            var validationCallback = imageLayerSupport.createSingletonValidationCallback();
-            var singletonTraitInjector = imageLayerSupport.getSingletonTraitInjector();
-            HostedManagement hostedSingletonManagement = new HostedManagement(loader.classLoaderSupport.annotationExtractor,
-                            registrationCallback, validationCallback, singletonTraitInjector, imageLayerSupport.buildingImageLayer);
-            HostedManagement.install(hostedSingletonManagement);
-            NativeImageGenerator.loadAndInstallLayeredSingletons(imageLayerSupport, hostedSingletonManagement);
+            installSingletonRegistries(imageLayerSupport);
 
             setSystemPropertiesForImageLate(k);
 
@@ -1218,6 +1211,22 @@ public class NativeImageGenerator {
         ResolvedJavaMethod valueOf = JVMCIReflectionUtil.getUniqueDeclaredMethod(access.getProviders().getMetaAccess(), enumType, "valueOf", String.class);
         JavaKind.valueOf(kind.name());
         return access.invoke(valueOf, null, enumName);
+    }
+
+    private void installSingletonRegistries(HostedImageLayerBuildingSupport imageLayerSupport) {
+        /* The callbacks need be installed early, before any singleton is registered. */
+        var registrationCallback = imageLayerSupport.createSingletonRegistrationCallback();
+        var validationCallback = imageLayerSupport.createSingletonValidationCallback();
+        var singletonTraitInjector = imageLayerSupport.getSingletonTraitInjector();
+        HostedManagement hostedSingletonManagement = new HostedManagement(loader.classLoaderSupport.annotationExtractor,
+                        registrationCallback, validationCallback, singletonTraitInjector, imageLayerSupport.buildingImageLayer);
+        /* Install a singleton registry in the builder context. */
+        HostedManagement.install(hostedSingletonManagement);
+        NativeImageGenerator.loadAndInstallLayeredSingletons(imageLayerSupport, hostedSingletonManagement);
+        if (GuestAccess.get().isFullyIsolated()) {
+            /* Install a second singleton registry in the guest context. */
+            GuestImageSingletonSupport.install();
+        }
     }
 
     private static void setupGuestImageSingletons(SubstrateTargetDescription target) {
