@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -167,6 +167,9 @@ public final class RuntimeReflectionMetadata implements ReflectionMetadata {
     @Override
     public RecordComponent[] getRecordComponents(DynamicHub declaringClass, @SuppressWarnings("unused") int layerNum) {
         List<? extends CremaResolvedJavaRecordComponent> recordComponents = type.getRecordComponents();
+        if (recordComponents == null) {
+            return null;
+        }
         RecordComponent[] result = new RecordComponent[recordComponents.size()];
         Class<?> clazz = DynamicHub.toClass(declaringClass);
 
@@ -181,6 +184,12 @@ public final class RuntimeReflectionMetadata implements ReflectionMetadata {
                             recordComponent.getRawTypeAnnotations());
         }
         return result;
+    }
+
+    @Override
+    public RuntimeDynamicAccessMetadata getDynamicAccessMetadata(DynamicHub dynamicHub, int layerNum) {
+        /* Class queries are always allowed for runtime created classes */
+        throw VMError.intentionallyUnimplemented();
     }
 
     @Override
