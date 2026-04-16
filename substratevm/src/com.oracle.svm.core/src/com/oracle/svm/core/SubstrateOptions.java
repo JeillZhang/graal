@@ -58,7 +58,6 @@ import com.oracle.svm.core.imagelayer.ImageLayerBuildingSupport;
 import com.oracle.svm.core.jdk.VectorAPIEnabled;
 import com.oracle.svm.core.option.GCOptionValue;
 import com.oracle.svm.core.option.RuntimeOptionKey;
-import com.oracle.svm.core.pltgot.PLTGOTConfiguration;
 import com.oracle.svm.core.thread.VMOperationControl;
 import com.oracle.svm.core.util.TimeUtils;
 import com.oracle.svm.core.util.UserError;
@@ -672,14 +671,6 @@ public class SubstrateOptions {
 
     @Option(help = "Trace all native tool invocations as part of image building", type = User)//
     public static final HostedOptionKey<Boolean> TraceNativeToolUsage = new HostedOptionKey<>(false);
-
-    @LayerVerifiedOption(kind = Kind.Changed, severity = Severity.Error)//
-    @Option(help = "Prefix that is added to the names of entry point methods.")//
-    public static final HostedOptionKey<String> EntryPointNamePrefix = new HostedOptionKey<>("");
-
-    @LayerVerifiedOption(kind = Kind.Changed, severity = Severity.Error)//
-    @Option(help = "Prefix that is added to the names of API functions.", stability = OptionStability.STABLE)//
-    public static final HostedOptionKey<String> APIFunctionPrefix = new HostedOptionKey<>("graal_");
 
     @APIOption(name = "enable-http", fixedValue = "http", customHelp = "enable http support in the generated image")//
     @APIOption(name = "enable-https", fixedValue = "https", customHelp = "enable https support in the generated image")//
@@ -1657,12 +1648,6 @@ public class SubstrateOptions {
 
             // The concept of a code base would need to be introduced in the LLVM backend first.
             UserError.guarantee(!useLLVMBackend(), "%s is currently not supported with the LLVM backend.", enabledOption);
-
-            /*
-             * With PLT/GOT enabled, some relative code pointers need to be redirected through
-             * PLT/GOT, which is currently not implemented.
-             */
-            UserError.guarantee(!PLTGOTConfiguration.isEnabled(), "%s cannot be used together with PLT/GOT.", enabledOption);
         }
     }
 
