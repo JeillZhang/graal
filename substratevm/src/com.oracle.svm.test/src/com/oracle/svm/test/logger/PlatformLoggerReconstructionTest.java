@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,42 +22,24 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.graal.code;
+package com.oracle.svm.test.logger;
 
-import java.util.Objects;
+import org.junit.Test;
 
-import org.graalvm.nativeimage.Platform;
-import org.graalvm.nativeimage.Platforms;
+import com.oracle.svm.test.NativeImageBuildArgs;
 
-import jdk.vm.ci.code.site.Reference;
-
-@Platforms(Platform.HOSTED_ONLY.class)
-public abstract sealed class CGlobalDataReference extends Reference permits CGlobalDataDirectReference, CGlobalDataIndirectReference {
-
-    private final CGlobalDataInfo dataInfo;
-
-    protected CGlobalDataReference(CGlobalDataInfo dataInfo) {
-        this.dataInfo = Objects.requireNonNull(dataInfo);
+@NativeImageBuildArgs({
+                "-H:+UnlockExperimentalVMOptions",
+                "-H:+EnableLoggingFeature"
+})
+public class PlatformLoggerReconstructionTest extends AbstractPlatformLoggerReconstructionTest {
+    @Test
+    public void testBuildTimePlatformLoggerPreservedInRuntimeCache() {
+        assertBuildTimePlatformLoggerPreservedInRuntimeCache(true);
     }
 
-    public CGlobalDataInfo getDataInfo() {
-        return dataInfo;
-    }
-
-    @Override
-    public final boolean equals(Object o) {
-        if (o == this) {
-            return true;
-        }
-        if (o == null || o.getClass() != getClass()) {
-            return false;
-        }
-        CGlobalDataReference that = (CGlobalDataReference) o;
-        return dataInfo.equals(that.dataInfo);
-    }
-
-    @Override
-    public final int hashCode() {
-        return dataInfo.hashCode();
+    @Test
+    public void testReachableButUncachedBuildTimePlatformLoggerIsNotInsertedIntoRuntimeCache() {
+        assertReachableButUncachedBuildTimePlatformLoggerNotInsertedIntoRuntimeCache();
     }
 }
