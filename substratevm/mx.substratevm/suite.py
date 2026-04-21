@@ -691,6 +691,7 @@ suite = {
             "subDir": "src",
             "sourceDirs": ["src"],
             "dependencies": [
+                "com.oracle.graal.pointsto.standalone.test.classes",
                 "mx:JUNIT_TOOL",
                 "sdk:NATIVEIMAGE",
                 "STANDALONE_POINTSTO",
@@ -713,6 +714,20 @@ suite = {
                 "compiler:GRAAL_PROCESSOR",
             ],
             "javaCompliance" : "21+",
+            "jacoco" : "exclude",
+        },
+
+        "com.oracle.graal.pointsto.standalone.test.classes": {
+            "subDir": "src",
+            "sourceDirs": ["src"],
+            "dependencies": [
+                "compiler:GRAAL",
+            ],
+            "checkstyle": "com.oracle.svm.test",
+            "workingSets": "SVM,Test",
+            "annotationProcessors": [],
+            "javaCompliance" : "21+",
+            "testProject": True,
             "jacoco" : "exclude",
         },
 
@@ -1112,6 +1127,24 @@ suite = {
             ],
             "javaCompliance" : "21+",
             "jacoco" : "exclude",
+        },
+
+        "com.oracle.svm.driver.test": {
+            "subDir": "src",
+            "sourceDirs": ["src"],
+            "dependencies": [
+                "mx:JUNIT_TOOL",
+                "com.oracle.svm.driver",
+            ],
+            "checkstyle": "com.oracle.svm.test",
+            "workingSets": "SVM",
+            "annotationProcessors": [
+                "compiler:GRAAL_PROCESSOR",
+                "SVM_PROCESSOR",
+            ],
+            "javaCompliance": "24+",
+            "jacoco": "exclude",
+            "testProject": True,
         },
 
         "com.oracle.svm.libjvm": {
@@ -2715,6 +2748,21 @@ suite = {
                 "SVM_GUEST_STAGING",
             ],
             "testDistribution" : True,
+        },
+
+        "SVM_DRIVER_TESTS" : {
+          "subDir": "src",
+          "relpath" : True,
+          "dependencies" : [
+            "com.oracle.svm.driver.test",
+          ],
+          "unittestConfig" : "svm-driver-unittest",
+          "distDependencies": [
+            "mx:JUNIT_TOOL",
+            "sdk:NATIVEIMAGE",
+            "SVM_DRIVER",
+          ],
+          "testDistribution" : True,
         },
 
         "SVM_TESTS" : {
