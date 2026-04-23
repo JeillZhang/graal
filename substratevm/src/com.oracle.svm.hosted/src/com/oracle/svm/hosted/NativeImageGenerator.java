@@ -571,6 +571,9 @@ public class NativeImageGenerator {
         try (TemporaryBuildDirectoryProviderImpl tempDirectoryProvider = new TemporaryBuildDirectoryProviderImpl(tempDirectoryOptionValue)) {
             var builderTempDir = tempDirectoryProvider.getTemporaryBuildDirectory();
             HostedImageLayerBuildingSupport imageLayerSupport = HostedImageLayerBuildingSupport.initialize(hostedOptionValues, loader, builderTempDir);
+
+            loader.initBuilderModules();
+
             installSingletonRegistries(imageLayerSupport);
 
             setSystemPropertiesForImageLate(k);
@@ -766,7 +769,8 @@ public class NativeImageGenerator {
 
                         createAbstractImage(k, hostedEntryPoints, heap, heapLayout, hMetaAccess, codeCache);
 
-                        FeatureImpl.AfterAbstractImageCreationAccessImpl access = new FeatureImpl.AfterAbstractImageCreationAccessImpl(featureHandler, loader, hMetaAccess, debug, image);
+                        FeatureImpl.AfterAbstractImageCreationAccessImpl access = new FeatureImpl.AfterAbstractImageCreationAccessImpl(featureHandler, loader, hMetaAccess, debug, image,
+                                        runtimeConfiguration);
                         featureHandler.forEachGraalFeature(feature -> feature.afterAbstractImageCreation(access));
 
                         image.build(imageName, debug);
@@ -1056,7 +1060,7 @@ public class NativeImageGenerator {
                 featureHandler.registerFeatures(loader, originalMetaAccess, debug);
                 BuildPhaseProvider.markFeatureRegistrationFinished();
 
-                loader.initBuilderModules();
+                loader.initCoreModules();
 
                 ImageSingletons.add(APIDeprecationSupport.class,
                                 new APIDeprecationSupport(ReflectionFeature.Options.TrackDeprecatedRegistrationUsage.getValue()));
