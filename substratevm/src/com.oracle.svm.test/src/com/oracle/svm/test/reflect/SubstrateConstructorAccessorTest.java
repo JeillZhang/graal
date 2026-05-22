@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,14 +22,31 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.jdk;
+package com.oracle.svm.test.reflect;
 
-import com.oracle.svm.core.annotate.Delete;
-import com.oracle.svm.core.annotate.TargetClass;
-import com.oracle.svm.core.hub.registry.ClassRegistries;
+import org.junit.Assert;
+import org.junit.Test;
 
-@TargetClass(value = jdk.internal.loader.NativeLibrary.class, onlyWith = ClassRegistries.IgnoresClassLoader.class)
-final class Target_jdk_internal_loader_NativeLibrary {
-    @Delete
-    private static native long findEntry0(long handle, String name);
+import com.oracle.svm.core.reflect.SubstrateConstructorAccessor;
+
+public class SubstrateConstructorAccessorTest {
+
+    static final class DeclaringClass {
+    }
+
+    @Test
+    public void checkReceiverRejectsWrongReceiverType() {
+        IllegalArgumentException exception = Assert.assertThrows(IllegalArgumentException.class, () -> SubstrateConstructorAccessor.checkReceiver(DeclaringClass.class, ""));
+        Assert.assertTrue(exception.getMessage().contains(DeclaringClass.class.getTypeName()));
+    }
+
+    @Test
+    public void checkReceiverRejectsNullReceiver() {
+        Assert.assertThrows(NullPointerException.class, () -> SubstrateConstructorAccessor.checkReceiver(DeclaringClass.class, null));
+    }
+
+    @Test
+    public void checkReceiverAcceptsDeclaringClassReceiver() {
+        SubstrateConstructorAccessor.checkReceiver(DeclaringClass.class, new DeclaringClass());
+    }
 }
