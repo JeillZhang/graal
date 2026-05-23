@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,32 +22,25 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.svm.core.windows.headers;
+package com.oracle.svm.test;
 
-import org.graalvm.nativeimage.c.CContext;
-import org.graalvm.nativeimage.c.constant.CConstant;
-import org.graalvm.nativeimage.c.function.CFunction;
-import org.graalvm.nativeimage.c.type.CCharPointer;
+import java.net.MalformedURLException;
+import java.net.URI;
 
-import com.oracle.svm.core.windows.headers.WindowsLibC.WCharPointer;
+import org.junit.Assert;
+import org.junit.Test;
 
-// Checkstyle: stop
+@NativeImageBuildArgs({
+                "-H:+UnlockExperimentalVMOptions",
+                "-H:+RuntimeClassLoading",
+                "--enable-url-protocols=runtime",
+                "-H:DisableURLProtocols=http"
+})
+public class RuntimeURLProtocolDisableTest {
 
-/**
- * Definitions for Windows stringapiset.h
- */
-@CContext(WindowsDirectives.class)
-public class StringAPISet {
-
-    /** The system-wide Windows ANSI code page. */
-    @CConstant
-    public static native int CP_ACP();
-
-    /** UTF-8 code page. */
-    @CConstant
-    public static native int CP_UTF8();
-
-    /** Maps a character string to a UTF-16 (wide character) string. */
-    @CFunction(transition = CFunction.Transition.NO_TRANSITION)
-    public static native int MultiByteToWideChar(int CodePage, int dwFlags, CCharPointer lpMultiByteStr, int cbMultiByte, WCharPointer lpWideCharStr, int cchWideChar);
+    @Test
+    public void disabledProtocolIsNotResolvedByRuntimeURLFallback() {
+        MalformedURLException exception = Assert.assertThrows(MalformedURLException.class, () -> URI.create("http://example.com").toURL());
+        Assert.assertTrue(exception.getMessage(), exception.getMessage().contains("unknown protocol: http"));
+    }
 }
