@@ -224,6 +224,9 @@ final class BytecodeNodeElement extends AbstractElement {
         b.string("getRoot()");
         b.startGroup().cast(types.FrameWithoutBoxing).string("frame").end();
         b.string("target");
+        if (parent.model.hasYieldOperation()) {
+            b.string("null");
+        }
         b.end(2);
 
         return ex;
@@ -1198,6 +1201,9 @@ final class BytecodeNodeElement extends AbstractElement {
             b.statement("handlers__ = handlers_");
             b.statement("numNodes__ = numNodes_");
             b.statement("locals__ = locals_");
+            if (parent.model.enableInstructionRewriting) {
+                b.statement("rewrittenBciDeltas__ = rewrittenBciDeltas_");
+            }
             b.statement("configEncoding__ = configEncoding_");
 
             if (parent.model.enableTagInstrumentation) {
@@ -1213,6 +1219,9 @@ final class BytecodeNodeElement extends AbstractElement {
         b.statement("handlers__ = this.handlers");
         b.statement("numNodes__ = this.numNodes");
         b.statement("locals__ = this.locals");
+        if (parent.model.enableInstructionRewriting) {
+            b.statement("rewrittenBciDeltas__ = this.rewrittenBciDeltas");
+        }
         b.statement("configEncoding__ = configEncoding_");
 
         if (parent.model.enableTagInstrumentation) {
@@ -1568,6 +1577,9 @@ final class BytecodeNodeElement extends AbstractElement {
         ex.addParameter(new CodeVariableElement(parent.asType(), "$root"));
         ex.addParameter(new CodeVariableElement(types.FrameWithoutBoxing, "frame_"));
         ex.addParameter(new CodeVariableElement(type(long.class), "startState"));
+        if (parent.model.hasYieldOperation()) {
+            ex.addParameter(new CodeVariableElement(parent.continuationRootNodeImpl.asType(), "continuationRootNode"));
+        }
 
         if (handlerLayout.isTailCall()) {
             addHandlerConfig(ex);
@@ -1592,7 +1604,14 @@ final class BytecodeNodeElement extends AbstractElement {
 
         if (tier.isCached()) {
             b.startDeclaration(type(boolean.class), "wasCompiled").startStaticCall(types.CompilerDirectives, "inCompiledCode").end().end();
+            b.startIf().string("wasCompiled && ");
+            if (parent.model.hasYieldOperation()) {
+                b.string("(").startStaticCall(types.CompilerDirectives, "inCompilationRoot").end().string(" || continuationRootNode != null)").end().startBlock();
+            } else {
+                b.startStaticCall(types.CompilerDirectives, "inCompilationRoot").end().end().startBlock();
+            }
             b.startStatement().startStaticCall(types.CompilerDirectives, "preserveFrameStateHere").end().end();
+            b.end();
             // A deoptimization can float up to this location (e.g., when the first instruction is
             // an unreached branch condition).
             b.startIf().startStaticCall(types.CompilerDirectives, "inInterpreter").end().string(" && wasCompiled").end().startBlock();
