@@ -61,7 +61,9 @@ import jdk.graal.compiler.replacements.nodes.CipherBlockChainingAESNode;
 import jdk.graal.compiler.replacements.nodes.CounterModeAESNode;
 import jdk.graal.compiler.replacements.nodes.CRC32CUpdateBytesNode;
 import jdk.graal.compiler.replacements.nodes.CRC32UpdateBytesNode;
+import jdk.graal.compiler.replacements.nodes.DilithiumNode;
 import jdk.graal.compiler.replacements.nodes.ElectronicCodeBookAESNode;
+import jdk.graal.compiler.replacements.nodes.GaloisCounterModeAESNode;
 import jdk.graal.compiler.replacements.nodes.GHASHProcessBlocksNode;
 import jdk.graal.compiler.replacements.nodes.MessageDigestNode.MD5Node;
 import jdk.graal.compiler.replacements.nodes.MessageDigestNode.SHA1Node;
@@ -104,8 +106,14 @@ public final class Stubs {
             if (ElectronicCodeBookAESNode.class.equals(klass)) {
                 return ElectronicCodeBookAESNode.minFeaturesAMD64();
             }
+            if (isDilithiumNode(klass)) {
+                return DilithiumNode.minFeaturesAMD64();
+            }
             if (ChaCha20Node.class.equals(klass)) {
                 return ChaCha20Node.minFeaturesAMD64();
+            }
+            if (GaloisCounterModeAESNode.class.equals(klass)) {
+                return GaloisCounterModeAESNode.maxFeaturesAMD64();
             }
             if (GHASHProcessBlocksNode.class.equals(klass)) {
                 return GHASH_CPU_FEATURES_AMD64;
@@ -179,6 +187,9 @@ public final class Stubs {
             if (GHASHProcessBlocksNode.class.equals(klass)) {
                 return GHASHProcessBlocksNode.minFeaturesAARCH64();
             }
+            if (GaloisCounterModeAESNode.class.equals(klass)) {
+                return GaloisCounterModeAESNode.minFeaturesAARCH64();
+            }
             if (BigIntegerLeftShiftWorkerNode.class.equals(klass)) {
                 return EMPTY_CPU_FEATURES_AARCH64;
             }
@@ -213,6 +224,14 @@ public final class Stubs {
             return AArch64Features.getRequiredCPUFeatures(klass);
         }
         throw GraalError.unsupportedArchitecture(arch); // ExcludeFromJacocoGeneratedReport
+    }
+
+    private static boolean isDilithiumNode(Class<? extends ValueNode> klass) {
+        return DilithiumNode.DilithiumAlmostInverseNttNode.class.equals(klass) ||
+                        DilithiumNode.DilithiumAlmostNttNode.class.equals(klass) ||
+                        DilithiumNode.DilithiumDecomposePolyNode.class.equals(klass) ||
+                        DilithiumNode.DilithiumMontMulByConstantNode.class.equals(klass) ||
+                        DilithiumNode.DilithiumNttMultNode.class.equals(klass);
     }
 
     @Fold

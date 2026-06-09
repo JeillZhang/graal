@@ -37,8 +37,11 @@ import static jdk.graal.compiler.lir.LIRValueUtil.asJavaConstant;
 import static jdk.graal.compiler.lir.LIRValueUtil.isConstantValue;
 import static jdk.graal.compiler.lir.LIRValueUtil.isIntConstant;
 import static jdk.graal.compiler.lir.LIRValueUtil.isJavaConstant;
+import static jdk.graal.compiler.lir.amd64.AMD64ComplexVectorOp.supports;
 import static jdk.vm.ci.amd64.AMD64.r8;
 import static jdk.vm.ci.amd64.AMD64.r9;
+import static jdk.vm.ci.amd64.AMD64.r10;
+import static jdk.vm.ci.amd64.AMD64.r11;
 import static jdk.vm.ci.amd64.AMD64.rax;
 import static jdk.vm.ci.amd64.AMD64.rbx;
 import static jdk.vm.ci.amd64.AMD64.rcx;
@@ -131,9 +134,15 @@ import jdk.graal.compiler.lir.amd64.AMD64CountPositivesOp;
 import jdk.graal.compiler.lir.amd64.AMD64CRC32CUpdateBytesOp;
 import jdk.graal.compiler.lir.amd64.AMD64CRC32UpdateBytesOp;
 import jdk.graal.compiler.lir.amd64.AMD64CounterModeAESCryptOp;
+import jdk.graal.compiler.lir.amd64.AMD64DilithiumAlmostInverseNttOp;
+import jdk.graal.compiler.lir.amd64.AMD64DilithiumAlmostNttOp;
+import jdk.graal.compiler.lir.amd64.AMD64DilithiumDecomposePolyOp;
+import jdk.graal.compiler.lir.amd64.AMD64DilithiumMontMulByConstantOp;
+import jdk.graal.compiler.lir.amd64.AMD64DilithiumNttMultOp;
 import jdk.graal.compiler.lir.amd64.AMD64ElectronicCodeBookAESDecryptOp;
 import jdk.graal.compiler.lir.amd64.AMD64ElectronicCodeBookAESEncryptOp;
 import jdk.graal.compiler.lir.amd64.AMD64EncodeArrayOp;
+import jdk.graal.compiler.lir.amd64.AMD64GaloisCounterModeAESCryptOp;
 import jdk.graal.compiler.lir.amd64.AMD64GHASHProcessBlocksOp;
 import jdk.graal.compiler.lir.amd64.AMD64HaltOp;
 import jdk.graal.compiler.lir.amd64.AMD64IndexOfZeroOp;
@@ -1040,6 +1049,46 @@ public abstract class AMD64LIRGenerator extends LIRGenerator {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public Variable emitGaloisCounterModeAESCrypt(EnumSet<?> runtimeCheckedCPUFeatures, Value inAddr, Value len, Value ctAddr, Value outAddr, Value kAddr, Value stateAddr, Value subkeyHtblAddr,
+                    Value counterAddr) {
+        AllocatableValue rIn = rdi.asValue(inAddr.getValueKind());
+        AllocatableValue rLen = rsi.asValue(len.getValueKind());
+        AllocatableValue rCt = rdx.asValue(ctAddr.getValueKind());
+        AllocatableValue rOut = rcx.asValue(outAddr.getValueKind());
+        AllocatableValue rKey = r8.asValue(kAddr.getValueKind());
+        AllocatableValue rState = r9.asValue(stateAddr.getValueKind());
+        boolean useAVX512 = supports(target(), (EnumSet<CPUFeature>) runtimeCheckedCPUFeatures, CPUFeature.AES, CPUFeature.CLMUL, CPUFeature.AVX, CPUFeature.AVX2,
+                        CPUFeature.AVX512F, CPUFeature.AVX512DQ, CPUFeature.AVX512BW, CPUFeature.AVX512VL, CPUFeature.AVX512_VAES, CPUFeature.AVX512_VPCLMULQDQ);
+        AllocatableValue rSubkeyHtbl = (useAVX512 ? r10 : r11).asValue(subkeyHtblAddr.getValueKind());
+        AllocatableValue rCounter = (useAVX512 ? r11 : rax).asValue(counterAddr.getValueKind());
+        AllocatableValue rResult = rax.asValue(LIRKind.value(AMD64Kind.DWORD));
+        emitMove(rIn, inAddr);
+        emitMove(rLen, len);
+        emitMove(rCt, ctAddr);
+        emitMove(rOut, outAddr);
+        emitMove(rKey, kAddr);
+        emitMove(rState, stateAddr);
+        emitMove(rSubkeyHtbl, subkeyHtblAddr);
+        emitMove(rCounter, counterAddr);
+        append(new AMD64GaloisCounterModeAESCryptOp(this,
+                        (EnumSet<CPUFeature>) runtimeCheckedCPUFeatures,
+                        rIn,
+                        rLen,
+                        rCt,
+                        rOut,
+                        rKey,
+                        rState,
+                        rSubkeyHtbl,
+                        rCounter,
+                        rResult,
+                        getArrayLengthOffset() - getArrayBaseOffset(JavaKind.Int)));
+        Variable result = newVariable(len.getValueKind());
+        emitMove(result, rResult);
+        return result;
+    }
+
     @Override
     public Variable emitCBCAESEncrypt(Value inAddr, Value outAddr, Value kAddr, Value rAddr, Value len) {
         Variable result = newVariable(len.getValueKind());
@@ -1280,7 +1329,7 @@ public abstract class AMD64LIRGenerator extends LIRGenerator {
     @SuppressWarnings("unchecked")
     @Override
     public void emitSha256ImplCompress(EnumSet<?> runtimeCheckedCPUFeatures, Value buf, Value state) {
-        if (supports(runtimeCheckedCPUFeatures, CPUFeature.SHA)) {
+        if (supports(target(), (EnumSet<CPUFeature>) runtimeCheckedCPUFeatures, CPUFeature.SHA)) {
             append(new AMD64SHA256Op(this, (EnumSet<CPUFeature>) runtimeCheckedCPUFeatures, asAllocatable(buf), asAllocatable(state)));
         } else {
             RegisterValue rBuf = AMD64.rdi.asValue(buf.getValueKind());
@@ -1312,6 +1361,94 @@ public abstract class AMD64LIRGenerator extends LIRGenerator {
     @Override
     public void emitMD5ImplCompress(Value buf, Value state) {
         append(new AMD64MD5Op(this, asAllocatable(buf), asAllocatable(state)));
+    }
+
+    @Override
+    public Variable emitDilithiumAlmostNtt(Value coeffs, Value zetas) {
+        LIRKind resultKind = LIRKind.value(AMD64Kind.DWORD);
+        RegisterValue rResult = AMD64.rax.asValue(resultKind);
+        RegisterValue rCoeffs = AMD64.rdi.asValue(coeffs.getValueKind());
+        RegisterValue rZetas = AMD64.rsi.asValue(zetas.getValueKind());
+
+        emitMove(rCoeffs, coeffs);
+        emitMove(rZetas, zetas);
+
+        append(new AMD64DilithiumAlmostNttOp(rResult, rCoeffs, rZetas));
+        Variable result = newVariable(resultKind);
+        emitMove(result, rResult);
+        return result;
+    }
+
+    @Override
+    public Variable emitDilithiumAlmostInverseNtt(Value coeffs, Value zetas) {
+        LIRKind resultKind = LIRKind.value(AMD64Kind.DWORD);
+        RegisterValue rResult = AMD64.rax.asValue(resultKind);
+        RegisterValue rCoeffs = AMD64.rdi.asValue(coeffs.getValueKind());
+        RegisterValue rZetas = AMD64.rsi.asValue(zetas.getValueKind());
+
+        emitMove(rCoeffs, coeffs);
+        emitMove(rZetas, zetas);
+
+        append(new AMD64DilithiumAlmostInverseNttOp(rResult, rCoeffs, rZetas));
+        Variable result = newVariable(resultKind);
+        emitMove(result, rResult);
+        return result;
+    }
+
+    @Override
+    public Variable emitDilithiumNttMult(Value product, Value coeffs1, Value coeffs2) {
+        LIRKind resultKind = LIRKind.value(AMD64Kind.DWORD);
+        RegisterValue rResult = AMD64.rax.asValue(resultKind);
+        RegisterValue rProduct = AMD64.rdi.asValue(product.getValueKind());
+        RegisterValue rCoeffs1 = AMD64.rsi.asValue(coeffs1.getValueKind());
+        RegisterValue rCoeffs2 = AMD64.rdx.asValue(coeffs2.getValueKind());
+
+        emitMove(rProduct, product);
+        emitMove(rCoeffs1, coeffs1);
+        emitMove(rCoeffs2, coeffs2);
+
+        append(new AMD64DilithiumNttMultOp(rResult, rProduct, rCoeffs1, rCoeffs2));
+        Variable result = newVariable(resultKind);
+        emitMove(result, rResult);
+        return result;
+    }
+
+    @Override
+    public Variable emitDilithiumMontMulByConstant(Value coeffs, Value constant) {
+        LIRKind resultKind = LIRKind.value(AMD64Kind.DWORD);
+        RegisterValue rResult = AMD64.rax.asValue(resultKind);
+        RegisterValue rCoeffs = AMD64.rdi.asValue(coeffs.getValueKind());
+        RegisterValue rConstant = AMD64.rsi.asValue(constant.getValueKind());
+
+        emitMove(rCoeffs, coeffs);
+        emitMove(rConstant, constant);
+
+        append(new AMD64DilithiumMontMulByConstantOp(rResult, rCoeffs, rConstant));
+        Variable result = newVariable(resultKind);
+        emitMove(result, rResult);
+        return result;
+    }
+
+    @Override
+    public Variable emitDilithiumDecomposePoly(Value input, Value lowPart, Value highPart, Value twoGamma2, Value multiplier) {
+        LIRKind resultKind = LIRKind.value(AMD64Kind.DWORD);
+        RegisterValue rResult = AMD64.rax.asValue(resultKind);
+        RegisterValue rInput = AMD64.rdi.asValue(input.getValueKind());
+        RegisterValue rLowPart = AMD64.rsi.asValue(lowPart.getValueKind());
+        RegisterValue rHighPart = AMD64.rdx.asValue(highPart.getValueKind());
+        RegisterValue rTwoGamma2 = AMD64.rcx.asValue(twoGamma2.getValueKind());
+        RegisterValue rMultiplier = AMD64.r8.asValue(multiplier.getValueKind());
+
+        emitMove(rInput, input);
+        emitMove(rLowPart, lowPart);
+        emitMove(rHighPart, highPart);
+        emitMove(rTwoGamma2, twoGamma2);
+        emitMove(rMultiplier, multiplier);
+
+        append(new AMD64DilithiumDecomposePolyOp(rResult, rInput, rLowPart, rHighPart, rTwoGamma2, rMultiplier));
+        Variable result = newVariable(resultKind);
+        emitMove(result, rResult);
+        return result;
     }
 
     @SuppressWarnings("unchecked")
@@ -1346,23 +1483,16 @@ public abstract class AMD64LIRGenerator extends LIRGenerator {
         return result;
     }
 
-    @SuppressWarnings("unchecked")
-    protected boolean supports(EnumSet<?> runtimeCheckedCPUFeatures, CPUFeature feature) {
-        assert runtimeCheckedCPUFeatures == null || runtimeCheckedCPUFeatures.isEmpty() ||
-                        runtimeCheckedCPUFeatures.iterator().next() instanceof CPUFeature : Assertions.errorMessage(runtimeCheckedCPUFeatures);
-        EnumSet<CPUFeature> typedFeatures = (EnumSet<CPUFeature>) runtimeCheckedCPUFeatures;
-        return typedFeatures != null && typedFeatures.contains(feature) || ((AMD64) target().arch).getFeatures().contains(feature);
-    }
-
     /**
      * Return the maximum size of vector registers used in SSE/AVX instructions.
      */
+    @SuppressWarnings("unchecked")
     @Override
     public AVXSize getMaxVectorSize(EnumSet<?> runtimeCheckedCPUFeatures) {
-        if (supports(runtimeCheckedCPUFeatures, AMD64.CPUFeature.AVX512VL)) {
+        if (supports(target(), (EnumSet<CPUFeature>) runtimeCheckedCPUFeatures, AMD64.CPUFeature.AVX512VL)) {
             return AVXSize.ZMM;
         }
-        if (supports(runtimeCheckedCPUFeatures, AMD64.CPUFeature.AVX2)) {
+        if (supports(target(), (EnumSet<CPUFeature>) runtimeCheckedCPUFeatures, AMD64.CPUFeature.AVX2)) {
             return AVXSize.YMM;
         }
         return AVXSize.XMM;
