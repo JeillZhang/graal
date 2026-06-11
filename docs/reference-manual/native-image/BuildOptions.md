@@ -145,6 +145,9 @@ You can use `-H:Preserve` in the following ways:
 * `-H:Preserve=path=<cp-entry>`: preserves all elements from a given class-path entry
 * You can combine any of the previous uses by separating them with a comma (`,`). For example: `-H:Preserve=path=<cp-entry>,module=<module>,module=<module2>,package=<package>`
 
+Native Image also preserves the corresponding lambda proxy class when a lambda proxy class generated for a preserved capturing class is reached.
+It registers that proxy class for reflection and JNI access, like other preserved classes, and it registers serializable lambdas for Java serialization.
+
 You must explicitly configure multi-interface proxy classes, arrays of dimension 3 and higher, and _.class_ files as resources in the native image. Tooling-related Java modules are not included by default with `-H:Preserve=all` and must be added with `-H:Preserve=module=<module>` if needed.
 
 If you get errors related to `--initialize-at-build-time`, follow the suggestions in the error messages.
@@ -153,9 +156,15 @@ If you get errors related to `--initialize-at-build-time`, follow the suggestion
 
 For a practical demonstration, see the [preserve-package demo](https://github.com/graalvm/graalvm-demos/tree/master/native-image/preserve-package).
 
+You can combine `-H:Preserve` with [metadata tracing from a native image](AutomaticMetadataCollection.md#dynamic-metadata-collection-from-a-native-image) to collect reachability metadata from a representative run:
+```shell
+native-image -H:+UnlockExperimentalVMOptions -H:+MetadataTracingSupport -H:-UnlockExperimentalVMOptions -H:Preserve=package=com.example.library.* ...
+./application -XX:TraceMetadata=path=metadata-output -XX:TraceMetadataConditionPackages=com.example.application
+```
+
 #### Memory Requirements
 
-Native Image compilation is memory-intensive, particularly when building large projects or when using -`H:Preserve=all` or `--pgo-instrument`.
+Native Image compilation is memory-intensive, particularly when building large projects or when using `-H:Preserve=all` or `--pgo-instrument`.
 
 If you encounter `OutOfMemoryError: Java heap space` you can:
 
